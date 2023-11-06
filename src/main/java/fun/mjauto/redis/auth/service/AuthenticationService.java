@@ -2,7 +2,6 @@ package fun.mjauto.redis.auth.service;
 
 import fun.mjauto.redis.auth.dto.LoginFormDTO;
 import fun.mjauto.redis.common.dto.ApiResponse;
-import jakarta.servlet.http.HttpSession;
 
 /**
  * @author MJ

@@ -1,16 +1,8 @@
 package fun.mjauto.redis.auth.filter;
 
-import cn.hutool.core.util.StrUtil;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.web.servlet.HandlerInterceptor;
-
-import java.util.Map;
-import java.util.concurrent.TimeUnit;
-
-import static fun.mjauto.redis.common.constant.RedisConstants.LOGIN_USER_KEY;
-import static fun.mjauto.redis.common.constant.RedisConstants.LOGIN_USER_TTL;
 
 /**
  * @author MJ

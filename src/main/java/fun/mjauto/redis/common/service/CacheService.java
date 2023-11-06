@@ -1,8 +1,5 @@
 package fun.mjauto.redis.common.service;
 
-import cn.hutool.json.JSONUtil;
-import fun.mjauto.redis.shop.entity.Shop;
-
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
