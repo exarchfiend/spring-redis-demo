@@ -12,6 +12,7 @@ import fun.mjauto.redis.auth.mapper.AuthenticationMapper;
 import fun.mjauto.redis.auth.service.AuthenticationService;
 import fun.mjauto.redis.auth.utils.RegexUtils;
 import fun.mjauto.redis.common.dto.ApiResponse;
+import fun.mjauto.redis.common.service.CacheService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -33,10 +34,12 @@ import static fun.mjauto.redis.common.constant.SystemConstants.USER_NICK_NAME_PR
 @Service
 public class AuthenticationServiceImpl extends ServiceImpl<AuthenticationMapper, User> implements AuthenticationService {
     private final StringRedisTemplate stringRedisTemplate;
+    private final CacheService cacheService;
 
     @Autowired
-    public AuthenticationServiceImpl(StringRedisTemplate stringRedisTemplate) {
+    public AuthenticationServiceImpl(StringRedisTemplate stringRedisTemplate, CacheService cacheService) {
         this.stringRedisTemplate = stringRedisTemplate;
+        this.cacheService = cacheService;
     }
 
     @Override
@@ -108,6 +111,7 @@ public class AuthenticationServiceImpl extends ServiceImpl<AuthenticationMapper,
         // 1.创建用户
         User user = new User();
         user.setPhone(phone);
+        user.setId(cacheService.nextGlobalUniqueId("user"));
         user.setNickName(USER_NICK_NAME_PREFIX + RandomUtil.randomString(10));
         // 2.保存用户
         save(user);

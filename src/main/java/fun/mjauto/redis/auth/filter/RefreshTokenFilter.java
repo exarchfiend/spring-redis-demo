@@ -1,6 +1,9 @@
 package fun.mjauto.redis.auth.filter;
 
+import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.util.StrUtil;
+import fun.mjauto.redis.auth.dto.UserDTO;
+import fun.mjauto.redis.common.utils.UserHolder;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -25,8 +28,6 @@ public class RefreshTokenFilter implements HandlerInterceptor {
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
-        // 设置默认值
-        request.setAttribute("hasUser", false);
         // 1.获取请求头中的token
         String token = request.getHeader("authorization");
         if (StrUtil.isBlank(token)) {
@@ -39,8 +40,10 @@ public class RefreshTokenFilter implements HandlerInterceptor {
         if (userMap.isEmpty()) {
             return true;
         }
-        // 4.存在，告诉后续过滤器用户已登录
-        request.setAttribute("hasUser", true);
+        // 5.将查询到的hash数据转为UserDTO
+        UserDTO userDTO = BeanUtil.fillBeanWithMap(userMap, new UserDTO(), false);
+        // 6.存在，保存用户信息到 ThreadLocal
+        UserHolder.saveUser(userDTO);
         // 5.刷新token有效期
         stringRedisTemplate.expire(key, LOGIN_USER_TTL, TimeUnit.MINUTES);
         // 6.放行

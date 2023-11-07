@@ -9,7 +9,7 @@ import java.util.function.Function;
  * @date 2023/11/5
  */
 public interface CacheService {
-    public void set(String key, Object value, Long time, TimeUnit unit);
+    void set(String key, Object value, Long time, TimeUnit unit);
 
     void setWithLogicalExpire(String key, Object value, Long time, TimeUnit unit);
 
@@ -24,9 +24,15 @@ public interface CacheService {
      * @param unit       过期时间单位。
      * @return 查询到的实体类
      */
-    public <R, ID> R queryWithPassThrough(String keyPrefix, ID id, Class<R> type, Function<ID, R> dbFallback, Long time, TimeUnit unit);
+    <R, ID> R queryWithPassThrough(String keyPrefix, ID id, Class<R> type, Function<ID, R> dbFallback, Long time, TimeUnit unit);
 
-    public <R, ID> R queryWithMutex(String keyPrefix, ID id, Class<R> type, Function<ID, R> dbFallback, Long time, TimeUnit unit);
+    <R, ID> R queryWithMutex(String keyPrefix, ID id, Class<R> type, Function<ID, R> dbFallback, Long time, TimeUnit unit);
 
-    public <R, ID> R queryWithLogicalExpire(String keyPrefix, ID id, Class<R> type, Function<ID, R> dbFallback, Long time, TimeUnit unit);
+    <R, ID> R queryWithLogicalExpire(String keyPrefix, ID id, Class<R> type, Function<ID, R> dbFallback, Long time, TimeUnit unit);
+
+    long nextGlobalUniqueId(String keyPrefix);
+
+    boolean tryLock(String key);
+
+    void unLock(String key);
 }

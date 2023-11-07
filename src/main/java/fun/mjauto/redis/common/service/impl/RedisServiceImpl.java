@@ -11,6 +11,8 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -25,6 +27,14 @@ import static fun.mjauto.redis.common.constant.RedisConstants.*;
  */
 @Service
 public class RedisServiceImpl implements CacheService {
+    /**
+     * 开始时间戳
+     */
+    private static final long BEGIN_TIMESTAMP = 1699300690L;
+    /**
+     * 序列号的位数
+     */
+    private static final int COUNT_BITS = 32;
     private final StringRedisTemplate stringRedisTemplate;
 
     private static final ExecutorService CACHE_REBUILD_EXECUTOR = Executors.newFixedThreadPool(10);
@@ -135,7 +145,7 @@ public class RedisServiceImpl implements CacheService {
             throw new RuntimeException(e);
         } finally {
             // 7.释放锁
-            unlock(lockKey);
+            unLock(lockKey);
         }
         // 8.返回
         return r;
@@ -156,7 +166,7 @@ public class RedisServiceImpl implements CacheService {
         R r = JSONUtil.toBean((JSONObject) redisData.getData(), type);
         LocalDateTime expireTime = redisData.getExpireTime();
         // 5.判断是否过期
-        if(expireTime.isAfter(LocalDateTime.now())) {
+        if (expireTime.isAfter(LocalDateTime.now())) {
             // 5.1.未过期，直接返回店铺信息
             return r;
         }
@@ -166,7 +176,7 @@ public class RedisServiceImpl implements CacheService {
         String lockKey = LOCK_SHOP_KEY + id;
         boolean isLock = tryLock(lockKey);
         // 6.2.判断是否获取锁成功
-        if (isLock){
+        if (isLock) {
             // 6.3.成功，开启独立线程，实现缓存重建
             CACHE_REBUILD_EXECUTOR.submit(() -> {
                 try {
@@ -176,9 +186,9 @@ public class RedisServiceImpl implements CacheService {
                     this.setWithLogicalExpire(key, newR, time, unit);
                 } catch (Exception e) {
                     throw new RuntimeException(e);
-                }finally {
+                } finally {
                     // 释放锁
-                    unlock(lockKey);
+                    unLock(lockKey);
                 }
             });
         }
@@ -186,12 +196,52 @@ public class RedisServiceImpl implements CacheService {
         return r;
     }
 
-    private boolean tryLock(String key) {
+    @Override
+    public long nextGlobalUniqueId(String keyPrefix) {
+        // 1.生成时间戳
+        LocalDateTime now = LocalDateTime.now();
+        long nowSecond = now.toEpochSecond(ZoneOffset.UTC);
+        long timestamp = nowSecond - BEGIN_TIMESTAMP;
+
+        // 2.生成序列号
+        // 2.1.获取当前日期，精确到天
+        String date = now.format(DateTimeFormatter.ofPattern("yyyy:MM:dd"));
+        // 2.2.判断是否有空的key
+        if (StrUtil.isBlank(keyPrefix) || StrUtil.isBlank(date)) {
+            throw new RuntimeException("生成全局唯一ID失败");
+        }
+        // 2.3.获取互斥锁
+        String lockKey = "id";
+        long count = 0;
+        try {
+            boolean isLock = tryLock(lockKey);
+            // 2.4.判断是否获取锁成功
+            if (!isLock) {
+                // 2.5.获取锁失败，休眠并重试
+                Thread.sleep(50);
+                return nextGlobalUniqueId(keyPrefix);
+            }
+            // 2.6.生成序列号
+            count = stringRedisTemplate.opsForValue().increment("icr:" + keyPrefix + ":" + date);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }finally {
+            // 2.7.释放锁
+            unLock(lockKey);
+        }
+
+        // 3.拼接并返回
+        return timestamp << COUNT_BITS | count;
+    }
+
+    @Override
+    public boolean tryLock(String key) {
         Boolean flag = stringRedisTemplate.opsForValue().setIfAbsent(key, "1", 10, TimeUnit.SECONDS);
         return BooleanUtil.isTrue(flag);
     }
 
-    private void unlock(String key) {
+    @Override
+    public void unLock(String key) {
         stringRedisTemplate.delete(key);
     }
 }
