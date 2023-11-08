@@ -32,7 +32,7 @@ public interface CacheService {
 
     long nextGlobalUniqueId(String keyPrefix);
 
-    boolean tryLock(String key);
+    boolean tryLock(String key,Long timeOut);
 
     void unLock(String key);
 }

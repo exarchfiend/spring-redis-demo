@@ -9,8 +9,11 @@ import fun.mjauto.redis.order.entity.SeckillVoucher;
 import fun.mjauto.redis.order.mapper.VoucherOrderMapper;
 import fun.mjauto.redis.order.service.SeckillVoucherService;
 import fun.mjauto.redis.order.service.VoucherOrderService;
+import org.redisson.api.RLock;
+import org.redisson.api.RedissonClient;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 
@@ -23,14 +26,17 @@ import java.time.LocalDateTime;
 public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Order> implements VoucherOrderService {
     private final SeckillVoucherService seckillVoucherService;
     private final CacheService cacheService;
+    private final RedissonClient redissonClient;
 
     @Autowired
-    public VoucherOrderServiceImpl(SeckillVoucherService seckillVoucherService, CacheService cacheService) {
+    public VoucherOrderServiceImpl(SeckillVoucherService seckillVoucherService, CacheService cacheService, RedissonClient redissonClient) {
         this.seckillVoucherService = seckillVoucherService;
         this.cacheService = cacheService;
+        this.redissonClient = redissonClient;
     }
 
     @Override
+    @Transactional
     public ApiResponse<?> createOrder(Long id) {
         // 查询优惠券信息
         SeckillVoucher seckillVoucher = seckillVoucherService.getById(id);
@@ -51,8 +57,11 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Ord
 
         // 从线程中拿到用户信息
         long userId = UserHolder.getUser().getId();
-        // 获取互斥锁
-        boolean isLock = cacheService.tryLock("order" + userId);
+        // 获取互斥锁 boolean isLock = cacheService.tryLock("lock:order" + userId,100L);
+        // 创建锁对象
+        RLock lock = redissonClient.getLock("lock:order" + userId);
+        // 尝试获取锁
+        boolean isLock = lock.tryLock();
         // 判断
         if(!isLock){
             // 获取锁失败，直接返回失败或者重试

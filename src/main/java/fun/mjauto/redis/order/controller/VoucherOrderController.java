@@ -24,7 +24,7 @@ public class VoucherOrderController {
     }
 
     @PostMapping("/create")
-    public ApiResponse<?> createOrder(@RequestParam("id") Long id){
+    public ApiResponse<?> createOrder(@RequestParam("id") Long id) throws InterruptedException {
         return voucherOrderService.createOrder(id);
     }
 }

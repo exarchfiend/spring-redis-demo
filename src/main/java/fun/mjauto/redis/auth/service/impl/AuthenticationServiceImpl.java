@@ -91,6 +91,7 @@ public class AuthenticationServiceImpl extends ServiceImpl<AuthenticationMapper,
         // 7.保存用户信息到 redis中
         // 7.1.随机生成token，作为登录令牌
         String token = UUID.randomUUID().toString(true);
+        log.info("登陆验证：" + token);
         // 7.2.将User对象转为HashMap存储
         UserDTO userDTO = BeanUtil.copyProperties(user, UserDTO.class);
         Map<String, Object> userMap = BeanUtil.beanToMap(userDTO, new HashMap<>(),

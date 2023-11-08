@@ -1,11 +1,13 @@
 package fun.mjauto.redis.common.service.impl;
 
+import cn.hutool.core.lang.UUID;
 import cn.hutool.core.util.BooleanUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import fun.mjauto.redis.common.aggregate.LogicalExpiryRedisData;
 import fun.mjauto.redis.common.service.CacheService;
+import lombok.val;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
@@ -35,6 +37,7 @@ public class RedisServiceImpl implements CacheService {
      * 序列号的位数
      */
     private static final int COUNT_BITS = 32;
+    private static final String VALUE_PREFIX = UUID.randomUUID().toString(true) + "-";
     private final StringRedisTemplate stringRedisTemplate;
 
     private static final ExecutorService CACHE_REBUILD_EXECUTOR = Executors.newFixedThreadPool(10);
@@ -123,7 +126,7 @@ public class RedisServiceImpl implements CacheService {
         String lockKey = LOCK_SHOP_KEY + id;
         R r = null;
         try {
-            boolean isLock = tryLock(lockKey);
+            boolean isLock = tryLock(lockKey, 10L);
             // 4.2.判断是否获取成功
             if (!isLock) {
                 // 4.3.获取锁失败，休眠并重试
@@ -174,7 +177,7 @@ public class RedisServiceImpl implements CacheService {
         // 6.缓存重建
         // 6.1.获取互斥锁
         String lockKey = LOCK_SHOP_KEY + id;
-        boolean isLock = tryLock(lockKey);
+        boolean isLock = tryLock(lockKey, 10L);
         // 6.2.判断是否获取锁成功
         if (isLock) {
             // 6.3.成功，开启独立线程，实现缓存重建
@@ -214,7 +217,7 @@ public class RedisServiceImpl implements CacheService {
         String lockKey = "id";
         long count = 0;
         try {
-            boolean isLock = tryLock(lockKey);
+            boolean isLock = tryLock(lockKey, 10L);
             // 2.4.判断是否获取锁成功
             if (!isLock) {
                 // 2.5.获取锁失败，休眠并重试
@@ -225,7 +228,7 @@ public class RedisServiceImpl implements CacheService {
             count = stringRedisTemplate.opsForValue().increment("icr:" + keyPrefix + ":" + date);
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
-        }finally {
+        } finally {
             // 2.7.释放锁
             unLock(lockKey);
         }
@@ -235,13 +238,23 @@ public class RedisServiceImpl implements CacheService {
     }
 
     @Override
-    public boolean tryLock(String key) {
-        Boolean flag = stringRedisTemplate.opsForValue().setIfAbsent(key, "1", 10, TimeUnit.SECONDS);
+    public boolean tryLock(String key, Long timeOut) {
+
+        long threadId = Thread.currentThread().getId();
+
+        Boolean flag = stringRedisTemplate.opsForValue().setIfAbsent(key, VALUE_PREFIX + threadId, timeOut, TimeUnit.SECONDS);
         return BooleanUtil.isTrue(flag);
     }
 
     @Override
     public void unLock(String key) {
-        stringRedisTemplate.delete(key);
+
+        long threadId = Thread.currentThread().getId();
+
+        String value = stringRedisTemplate.opsForValue().get(key);
+
+        if ((VALUE_PREFIX + threadId).equals(value)) {
+            stringRedisTemplate.delete(key);
+        }
     }
 }
