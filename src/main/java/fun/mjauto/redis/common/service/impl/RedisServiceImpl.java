@@ -159,9 +159,9 @@ public class RedisServiceImpl implements CacheService {
         String key = keyPrefix + id;
         // 1.从redis查询商铺缓存
         String json = stringRedisTemplate.opsForValue().get(key);
-        // 2.判断是否存在
+        // 2.判断是否存在(逻辑过期的缓存是需要单独进行初始化的 不然数据库中有也会被redis返回null)
         if (StrUtil.isBlank(json)) {
-            // 3.存在，直接返回
+            // 3.不存在，直接返回
             return null;
         }
         // 4.命中，需要先把json反序列化为对象

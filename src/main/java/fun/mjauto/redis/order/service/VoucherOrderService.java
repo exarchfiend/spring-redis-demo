@@ -10,5 +10,5 @@ import fun.mjauto.redis.order.entity.Order;
  * @date 2023/11/6
  */
 public interface VoucherOrderService extends IService<Order> {
-    ApiResponse<?> createOrder(Long id) throws InterruptedException;
+    ApiResponse<?> createOrder(Long id);
 }

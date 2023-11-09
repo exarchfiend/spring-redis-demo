@@ -1,6 +1,7 @@
 package fun.mjauto.redis.order.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
+import fun.mjauto.redis.common.dto.ApiResponse;
 import fun.mjauto.redis.order.entity.Voucher;
 
 /**
@@ -9,5 +10,8 @@ import fun.mjauto.redis.order.entity.Voucher;
  * @date 2023/11/6
  */
 public interface VoucherService extends IService<Voucher> {
-    Voucher getVoucherById(Long id);
+
+    ApiResponse<?> selectVoucherById(Long id);
+
+    ApiResponse<?> setVoucherStock(Long id);
 }

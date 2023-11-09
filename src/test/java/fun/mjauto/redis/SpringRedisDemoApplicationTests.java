@@ -32,5 +32,6 @@ class SpringRedisDemoApplicationTests {
         long nowSecond = now.toEpochSecond(ZoneOffset.UTC);
         System.out.println(now);
         System.out.println(nowSecond);
+        System.out.println(System.currentTimeMillis());
     }
 }
